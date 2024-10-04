@@ -26,11 +26,6 @@
   --callout-icon: lucide-highlighter 
 }
 
-.callout[data-callout="annotation-purple"] {
-  --callout-color: 162, 138, 229;
-  --callout-icon: lucide-highlighter 
-}
-
 .callout[data-callout="annotation-magenta"] {
   --callout-color: 229, 110, 238;
   --callout-icon: lucide-highlighter 
