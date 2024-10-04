@@ -1,13 +1,13 @@
 {#- infer latest annotation Date -#}
 {%- macro maxAnnotationsDate() -%}
-   {%- set tempDate = "" -%}
-	{%- for a in annotations -%}
-		{%- set testDate = a.date | format("YYYY-MM-DD#HH:mm:ss") -%}
-		{%- if testDate > tempDate or tempDate == ""-%}
-			{%- set tempDate = testDate -%}
-		{%- endif -%}
-	{%- endfor -%}
-	{{tempDate}}
+{%- set tempDate = "" -%}
+{%- for a in annotations -%}
+{%- set testDate = a.date | format("YYYY-MM-DD#HH:mm:ss") -%}
+{%- if testDate > tempDate or tempDate == ""-%}
+{%- set tempDate = testDate -%}
+{%- endif -%}
+{%- endfor -%}
+{{tempDate}}
 {%- endmacro -%}
 
 {%- set colorCategoryToMeaning = {
@@ -23,11 +23,11 @@
 
 {# lookup Zotero colors in annotations with Category #}
 {%- macro getMeaning(colorCategory) -%}
-	{%- if colorCategory-%}
-		{{- colorCategoryToMeaning[colorCategory] -}}
-	{%- else -%}
-		{{- colorCategoryToMeaning["yellow"] -}}
-	{%- endif -%}
+{%- if colorCategory-%}
+{{- colorCategoryToMeaning[colorCategory] -}}
+{%- else -%}
+{{- colorCategoryToMeaning["yellow"] -}}
+{%- endif -%}
 {%- endmacro -%}
 
 {%- set calloutHeaders = {
@@ -40,31 +40,32 @@
 
 {# lookup callout headers by type of annotation #}
 {%- macro calloutHeader(type) -%}
-	{%- if calloutHeaders[type]-%}
-		{{- calloutHeaders[type] -}}
-	{%- else -%}
-		{{Note}}
-	{%- endif -%}
+{%- if calloutHeaders[type]-%}
+{{- calloutHeaders[type] -}}
+{%- else -%}
+{{Note}}
+{%- endif -%}
 {%- endmacro -%}
 
 {#- handle space characters in zotero tags -#}
 {%- macro printTags(rawTags) -%}
-	{%- if rawTags.length > 0 -%}
-		{%- for tag in rawTags -%}
-			#zotero/{{ tag.tag | lower | replace(" ","_") }} {{ ' ' }} 
-		{%- endfor %}
-	{%- endif %}
+{%- if rawTags.length > 0 -%}
+{%- for tag in rawTags -%}
+#{{ tag.tag | lower | replace(" ","_") }} {{ ' ' }}
+{%- endfor %}
+{%- endif %}
 {%- endmacro -%}
 
+{% if itemType != 'videoRecording' %}
 {%- set inline_fields = {
 "abstract": abstractNote,
-"pdf": pdfZoteroLink, 
-"extra": '"' ~ extra ~ '"',
-"bibliography": '"' ~ bibliography ~ '"'
+"extra": '"' ~ extra ~ '"'
 }
 -%}
+{% endif %}
 
 {%- set frontmatter_fields = {
+"note": "reference",
 "title": '"' ~ (title | replace ('"','') or caseTitle | replace ('"','')) ~ '"',
 "authors": '[' ~ authors | replace (";", ", ") ~ ']',
 "editors": '[' ~ editors | replace (";", ", ") ~ ']',
@@ -73,9 +74,7 @@
 "scriptwriters": '[' ~ scriptwriters | replace (";", ", ") ~ ']',
 "first-entry": minAnnotationsDate,
 "last-entry": maxAnnotationsDate,
-"online-uri": uri,
-"year": date | format("YYYY"),
-"date": date | format("YYYY-MM-DD"),
+"tags": allTags,
 "citekey": citekey,
 "pages": numPages,
 "running-time": runningTime,
@@ -84,7 +83,10 @@
 "language": language,
 "url": url,
 "isbn": ISBN,
-"cover": "https://covers.openlibrary.org/b/isbn/"+ISBN | replace ("-","")+"-M.jpg"
+"collection": collections[0].fullPath.split('/')[0],
+"added": (dateAdded | format("YYYY-MM-DD")) if dateAdded is not none else '',
+"date": (date | format("YYYY-MM-DD")) if date is not none else '',
+"year": (date | format("YYYY")) if date is not none else ''
 }
 -%}
 
@@ -104,85 +106,68 @@
 {%- endfor -%}
 {%- endmacro -%}
 
----
-aliases: ["{{title | replace ('"','')}}"{%- if authors and date-%}, "
-{%- for author in authors -%}
-{{author}}
-{%- endfor -%}
-{{" ("+date | format("YYYY") +") "}}{{title | replace ('"','')}}{{caseTitle | replace ('"','')}}"{%- endif -%}]
 {{generateFields("",": ",frontmatter_fields) -}}
----
-
 {%- if ISBN -%}
 ![|200](https://covers.openlibrary.org/b/isbn/{{ISBN | replace ("-","")}}-M.jpg)
 {%- endif -%}
 {{ "" }}
 
-{{printTags(tags)}}
+Cite
+{{bibliography}}
 
-> [!info]- Metadata
-{{generateFields("> ",":: ",inline_fields) -}}
-{% if relations.length > 0 -%}
-> 
-> > [!note]- References:  
-> >
-> > | title | proxy note | desktopURI |
-> > | --- | --- | --- |
-{%- for r in relations %}
-> > | {{r.title | replace("|","❕")}} | [[@{{r.citekey}}]] | [Zotero Link]({{r.desktopURI}}) |
-{%- endfor -%}
-{{ "" }}
-{%- endif %}
-{{ "" }}
-🔥🔥🔥everything above this line might change during an update 🔥🔥🔥
-{% persist "notes" %}
-{%- set newNotes = notes | filterby("dateModified", "dateafter", lastImportDate) -%}
-{% if newNotes.length > 0 %}
-⬇️*Imported (Notes) on: {{importDate | format("YYYY-MM-DD#HH:mm:ss")}}*⬇️
-{% for note in newNotes %}
-### 🟨 Note (modified: {{ note.dateModified | format("YYYY-MM-DD#HH:mm:ss") }})
-{{ "" }}
-{#- change heading level -#}
-{{- note.note | replace ("# ","### ") -}}
-{{ "" }}
-[Link to note](zotero://select/library/items/{{note.key}})
-{{printTags(note.tags)}}
-
----
-{%- endfor %}
-{% endif -%} 
-
-{% endpersist -%}
-{{ " " }}
+Open in Zotero
+Metadata
 {% persist "annotations" %}
 
 {%- set newAnnotations = annotations | filterby("date", "dateafter", lastImportDate) -%}
 {% if newAnnotations.length > 0 %}
-⬇️*Imported (Annotations) on {{importDate | format("YYYY-MM-DD#HH:mm:ss")}}*⬇️
+Imported annotations on {{importDate | format("YYYY-MM-DD#HH:mm:ss")}} - below
 {% for annotation in newAnnotations %}
-> [!annotation-{{ annotation.colorCategory | lower}}] {{getMeaning(annotation.colorCategory | lower)}}
-> {%- if annotation.tags.length > 0 %} 
-> {{printTags(annotation.tags)}}
+
+{{getMeaning(annotation.colorCategory | lower)}}
+{%- if annotation.tags.length > 0 %}
+{{printTags(annotation.tags)}}
 {%- endif %}
-{%- if annotation.annotatedText.length > 0 %} 
-> 
-> {{-annotation.annotatedText | nl2br -}} 
+{%- if annotation.annotatedText.length > 0 %}
+
+{{-annotation.annotatedText | nl2br -}}
 {%- endif %}
 {%- if annotation.imageRelativePath %}
-> ![[{{annotation.imageRelativePath}}|300]]
+“” could not be found.
+
 {%- endif %}
-{%- if annotation.comment %} 
-> 
-> **comment:**
-> {{annotation.comment | nl2br }}
+{%- if annotation.comment %}
+
+comment:
+{{annotation.comment | nl2br }}
 {%- endif %}
-> 
-> {{annotation.date | format("YYYY-MM-DD#HH:mm")}}
-{%- if annotation.desktopURI %} 
-> 
-> (see [PDF p. {{annotation.page}}]({{annotation.desktopURI}}))
+
+{{annotation.date | format("YYYY-MM-DD#HH:mm")}}
+{%- if annotation.desktopURI %}
+
+(see PDF p. {{annotation.page}})
 {%- endif %}
+
 {% endfor %}
 {# {% endfor %} #}
 {%- endif -%}
 {%- endpersist -%}
+{{ " " }}
+{% persist "notes" %}
+{%- set newNotes = notes | filterby("dateModified", "dateafter", lastImportDate) -%}
+{% if newNotes.length > 0 %}
+Imported notes on {{importDate | format("YYYY-MM-DD#HH:mm:ss")}} - below
+{% for note in newNotes %}
+
+🟨 Note (modified: {{ note.dateModified | format("YYYY-MM-DD#HH:mm:ss") }})
+{{ "" }}
+{#- change heading level -#}
+{{- note.note | replace ("# ","### ") -}}
+{{ "" }}
+Link to note
+{{printTags(note.tags)}}
+
+{%- endfor %}
+{% endif -%}
+
+{% endpersist -%}
